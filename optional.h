@@ -10,15 +10,9 @@ in_place_t in_place;
 
 
 namespace optional_ {
-    template <typename T> //TODO delete?
-    inline constexpr bool is_td = std::is_trivially_destructible_v<T>;
-
-    template <typename T>
-    inline constexpr bool is_tc = std::is_trivially_copyable_v<T>;
-
-    template <typename T, bool v = is_td<T>>
+    template <typename T, bool v = std::is_trivially_destructible_v<T>>
     struct destructible_base {
-        constexpr destructible_base() : dummy() {}
+        constexpr destructible_base() {}
 
         constexpr explicit destructible_base(T value_)
             : value(std::move(value_)),
@@ -37,7 +31,6 @@ namespace optional_ {
     protected:
         union {
             T value;
-            char dummy; //TODO delete?
         };
         bool is_valid = false;
     };
@@ -54,7 +47,7 @@ namespace optional_ {
         constexpr destructible_base(in_place_t, Args&& ...args)
                 : value(std::forward<Args>(args)...),
                   is_valid(true) {}
-    protected:  //TODO replace union on T value;
+    protected:
         union {
             T value;
             char dummy;
@@ -62,7 +55,7 @@ namespace optional_ {
         bool is_valid = false;
     };
 
-    template <typename T, bool v = is_tc<T>>
+    template <typename T, bool v = std::is_trivially_copyable_v<T>>
     struct optional_base : destructible_base<T> {
         using destructible_base<T>::destructible_base;
 
@@ -175,7 +168,6 @@ public:
     }
 };
 
-//TODO throw exception if not initialize?
 template<typename T>
 constexpr bool operator==(optional<T> const &a, optional<T> const &b) {
     return *a == *b;
