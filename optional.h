@@ -18,12 +18,12 @@ namespace optional_ {
 
     template <typename T, bool v = is_td<T>>
     struct destructible_base {
-        destructible_base() : dummy() {}
+        constexpr destructible_base() : dummy() {}
 
-        explicit destructible_base(T value_) : value(value_) {}
+        constexpr explicit destructible_base(T value_) : value(std::move(value_)) {}
 
         template<typename ...Args>
-        destructible_base(in_place_t, Args&& ...args)
+        constexpr destructible_base(in_place_t, Args&& ...args)
                 : value(std::forward<Args>(args)...) {}
 
         ~destructible_base() {
@@ -41,12 +41,12 @@ namespace optional_ {
 
     template <typename T>
     struct destructible_base<T, true> {
-        destructible_base() : dummy() {}
+        constexpr destructible_base() : dummy() {}
 
-        explicit destructible_base(T value_) : value(value_) {}
+        explicit constexpr destructible_base(T value_) : value(value_) {}
 
         template<typename ...Args>
-        destructible_base(in_place_t, Args&& ...args)
+        constexpr destructible_base(in_place_t, Args&& ...args)
                 : value(std::forward<Args>(args)...) {}
     protected:  //TODO replace union on T value;
         union {

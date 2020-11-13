@@ -335,12 +335,6 @@ static_assert(std::is_trivially_copyable_v<optional<int>>);
 
 static_assert([]
 {
-    optional<int> a;
-    return !static_cast<bool>(a);
-}());
-
-static_assert([]
-{
     optional<cvalue> a;
     return !static_cast<bool>(a);
 }());
