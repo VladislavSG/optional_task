@@ -5,8 +5,8 @@
 
 struct nullopt_t {};
 struct in_place_t {};
-inline nullopt_t nullopt;
-inline in_place_t in_place;
+inline constexpr nullopt_t nullopt;
+inline constexpr in_place_t in_place;
 
 
 namespace optional_ {
