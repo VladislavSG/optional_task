@@ -20,11 +20,14 @@ namespace optional_ {
     struct destructible_base {
         constexpr destructible_base() : dummy() {}
 
-        constexpr explicit destructible_base(T value_) : value(std::move(value_)) {}
+        constexpr explicit destructible_base(T value_)
+            : value(std::move(value_)),
+              is_valid(true) {}
 
         template<typename ...Args>
         constexpr destructible_base(in_place_t, Args&& ...args)
-                : value(std::forward<Args>(args)...) {}
+                : value(std::forward<Args>(args)...),
+                  is_valid(true) {}
 
         ~destructible_base() {
             if (this->is_valid)
@@ -43,11 +46,14 @@ namespace optional_ {
     struct destructible_base<T, true> {
         constexpr destructible_base() : dummy() {}
 
-        explicit constexpr destructible_base(T value_) : value(value_) {}
+        explicit constexpr destructible_base(T value_)
+            : value(value_),
+              is_valid(true) {}
 
         template<typename ...Args>
         constexpr destructible_base(in_place_t, Args&& ...args)
-                : value(std::forward<Args>(args)...) {}
+                : value(std::forward<Args>(args)...),
+                  is_valid(true) {}
     protected:  //TODO replace union on T value;
         union {
             T value;
@@ -61,14 +67,16 @@ namespace optional_ {
         using destructible_base<T>::destructible_base;
 
         constexpr optional_base(optional_base const& other) {
-            if (this->is_valid) {
+            if (other.is_valid) {
                 new(&this->value) T(other.value);
+                this->is_valid = true;
             }
         }
 
         constexpr optional_base(optional_base&& other) {
-            if (this->is_valid) {
+            if (other.is_valid) {
                 new(&this->value) T(std::move(other.value));
+                this->is_valid = true;
             }
         }
 
