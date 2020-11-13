@@ -4,11 +4,10 @@
 #include <utility>
 
 struct nullopt_t {};
-
 struct in_place_t {};
-
 nullopt_t nullopt;
 in_place_t in_place;
+
 
 namespace optional_ {
     template <typename T> //TODO delete?
@@ -17,67 +16,101 @@ namespace optional_ {
     template <typename T>
     inline constexpr bool is_tc = std::is_trivially_copyable_v<T>;
 
-    template <typename T>
-    struct storage {
-
-
-    private:
-        std::aligned_storage<sizeof(T), alignof(T)> data;
-        bool is_valid = false;
-    };
-
     template <typename T, bool v = is_td<T>>
     struct destructible_base {
+        destructible_base() : dummy() {}
 
+        explicit destructible_base(T value_) : value(value_) {}
 
-        destructible_base& operator=(destructible_base const& other) {
-            if (other.is_valid) {
-                if (is_valid) {
-                    value = other.value;
-                } else {
-                    value = T(other.value); //TODO
-                }
-            }
-        }
+        template<typename ...Args>
+        destructible_base(in_place_t, Args&& ...args)
+                : value(std::forward<Args>(args)...) {}
 
         ~destructible_base() {
-            if (is_valid)
-                value.~T();
+            if (this->is_valid)
+                this->value.~T();
         }
 
+    protected:
         union {
             T value;
-            char dummy; //TODO try = '0' without constructor initialize
+            char dummy; //TODO delete?
         };
-        bool is_valid;
+        bool is_valid = false;
     };
 
     template <typename T>
     struct destructible_base<T, true> {
+        destructible_base() : dummy() {}
+
+        explicit destructible_base(T value_) : value(value_) {}
+
+        template<typename ...Args>
+        destructible_base(in_place_t, Args&& ...args)
+                : value(std::forward<Args>(args)...) {}
+    protected:  //TODO replace union on T value;
         union {
             T value;
-            char dummy; //TODO try = '0' without constructor initialize
+            char dummy;
         };
-        bool is_valid;
+        bool is_valid = false;
     };
 
     template <typename T, bool v = is_tc<T>>
     struct optional_base : destructible_base<T> {
-        using destructible_base<T>::is_valid;
-        using destructible_base<T>::value;
+        using destructible_base<T>::destructible_base;
 
-        optional_base(optional_base const& other) {
-            if (is_valid) {
-                value.T(other.value);
+        constexpr optional_base(optional_base const& other) {
+            if (this->is_valid) {
+                new(&this->value) T(other.value);
             }
-        };
+        }
 
-        optional_base() = default;
-        ~optional_base() = default;
+        constexpr optional_base(optional_base&& other) {
+            if (this->is_valid) {
+                new(&this->value) T(std::move(other.value));
+            }
+        }
+
+        optional_base& operator=(optional_base const& other) {
+            if (other.is_valid) {
+                if (this->is_valid) {
+                    this->value = other.value;
+                } else {
+                    new(&this->value) T(other.value);
+                    this->is_valid = true;
+                }
+            } else {
+                if (this->is_valid) {
+                    this->value.~T();
+                    this->is_valid = false;
+                }
+            }
+            return *this;
+        }
+
+        optional_base& operator=(optional_base&& other) {
+            if (other.is_valid) {
+                if (this->is_valid) {
+                    this->value = std::move(other.value);
+                } else {
+                    new(&this->value) T(std::move(other.value));
+                    this->is_valid = true;
+                }
+            } else {
+                if (this->is_valid) {
+                    this->value.~T();
+                    this->is_valid = false;
+                }
+            }
+            return *this;
+        }
     };
 
     template <typename T>
-    struct optional_base<T, true> : destructible_base<T> {};
+    struct optional_base<T, true> : destructible_base<T> {
+        using destructible_base<T>::destructible_base;
+    };
 }
 
 
@@ -85,11 +118,9 @@ namespace optional_ {
 template <typename T>
 class optional : private optional_::optional_base<T> {
     using base = optional_::optional_base<T>;
-    using base::value;
-    using base::is_valid;
-
 public:
-    constexpr optional() noexcept {};
+    using base::base;
+
     constexpr optional(nullopt_t) noexcept : optional() {};
 
     constexpr optional(optional const&) = default;
@@ -98,47 +129,40 @@ public:
     optional& operator=(optional const&) = default;
     optional& operator=(optional&&) = default;
 
-    constexpr optional(T value) {
-        value = std::move(value);
-    };
-
-    template <typename... Args>
-    explicit constexpr optional(in_place_t, Args&&... args)
-            : optional_::optional_base<T>(std::forward<Args>(args)...) {}
-
     optional& operator=(nullopt_t) noexcept {
         reset();
+        return *this;
     }
 
     constexpr explicit operator bool() const noexcept {
-        return is_valid;
+        return this->is_valid;
     }
 
     constexpr T& operator*() noexcept {
-        return value;
+        return this->value;
     }
     constexpr T const& operator*() const noexcept {
-        return value;
+        return this->value;
     }
 
     constexpr T* operator->() noexcept {
-        return &value;
+        return &this->value;
     }
     constexpr T const* operator->() const noexcept {
-        return &value;
+        return &this->value;
     }
 
     template <typename... Args>
     void emplace(Args&&... args) {
         reset();
-        value = T(std::forward<Args>(args)...);
-        is_valid = true;
+        new(&this->value) T(std::forward<Args>(args)...);
+        this->is_valid = true;
     }
 
     void reset() {
-        if (is_valid) {
-            value.~T();
-            is_valid = false;
+        if (this->is_valid) {
+            this->value.~T();
+            this->is_valid = false;
         }
     }
 };
