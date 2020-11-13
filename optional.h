@@ -57,10 +57,7 @@ namespace optional_ {
                   is_valid(true) {}
 
         void reset() {
-            if (is_valid) {
-                value.~T();
-                is_valid = false;
-            }
+            is_valid = false;
         }
     protected:
         union {
