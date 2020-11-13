@@ -103,7 +103,8 @@ namespace optional_ {
             return *this;
         }
 
-        optional_base& operator=(optional_base&& other) noexcept(std::is_nothrow_move_constructible_v<T>) {
+        optional_base& operator=(optional_base&& other) noexcept(
+        std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T>) {
             if (other.is_valid) {
                 if (this->is_valid) {
                     this->value = std::move(other.value);
@@ -137,10 +138,11 @@ public:
     constexpr optional(nullopt_t) noexcept : optional() {};
 
     constexpr optional(optional const&) = default;
-    constexpr optional(optional&&) = default;
+    constexpr optional(optional&&) noexcept(std::is_nothrow_move_constructible_v<T>) = default;
 
     optional& operator=(optional const&) = default;
-    optional& operator=(optional&&) = default;
+    optional& operator=(optional&&) noexcept(std::is_nothrow_move_constructible_v<T>
+            && std::is_nothrow_move_assignable_v<T>) = default;
 
     optional& operator=(nullopt_t) noexcept {
         reset();
