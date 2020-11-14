@@ -72,14 +72,14 @@ namespace optional_ {
         using destructible_base<T>::destructible_base;
         using destructible_base<T>::reset;
 
-        constexpr optional_base(optional_base const& other) {
+        optional_base(optional_base const& other) {
             if (other.is_valid) {
                 new(&this->value) T(other.value);
                 this->is_valid = true;
             }
         }
 
-        constexpr optional_base(optional_base&& other) noexcept(std::is_nothrow_move_constructible_v<T>) {
+        optional_base(optional_base&& other) noexcept(std::is_nothrow_move_constructible_v<T>) {
             if (other.is_valid) {
                 new(&this->value) T(std::move(other.value));
                 this->is_valid = true;
